@@ -38,7 +38,7 @@ steps:
     sscCiToken: '$(ciToken)'
     uploadToSSC: true
     applicationIdentifierType: 'byId'
-    applicationVersionId: '16821'
+    applicationVersionId: '16822'
     buildTool: 'msbuild'
     buildFile: 'IWA.NET.sln'
     buildCommand: '/t:rebuild'
