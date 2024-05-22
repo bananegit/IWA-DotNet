@@ -1,116 +1,35 @@
-# Example Continuous Delivery Pipeline with Fortify on Premise (SCA/SSC) and/or Fortify on Demand (FOD) support
+# .NET Desktop
+# Build and run tests for .NET Desktop or Windows classic desktop solutions.
+# Add steps that publish symbols, save build artifacts, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/apps/windows/dot-net
 
 trigger:
-  batch: true
-  branches:
-    include:
-    - main
+- master
 
-  
+pool:
+  vmImage: 'windows-latest'
+
 variables:
-  #
-  # In order for the Pipeline to execute successfully you should create the following variables in the Pipeline UI (or uncomment and hard-code here)
-  # 
-  # ADOBaseURL: 'Your Azure DevOps Base URL'
-  # ADOPAT: 'Your Azure DevOps Personal Access Token'
-  # ADOProject: 'IWA.NET'
-  # AppUrl: 'URL of deployed application'
-  # AzureDBServer: 'Hostname of database server'
-  # AzureDBName: 'Database Name'
-  # AzureDBUser: 'Database User Login'
-  # AzureDBPassword: ' Database Password'
-  # FoDApplicationName: 'IWA.NET'
-  # FoDBaseUrl: 'https://api.emea.fortify.com'
-  # FoDBugTrackerVersion: '4.2'
-  # FoDClientId: 'Your FoD API Client Id'
-  # FoDClientSecret: 'You FoD API Client Secret'
-  # FoDParentRelease: 'main'
-  # FoDReleaseId: 'Your FOD Release Id'
-  # FoDUsername: 'You FoD username'
-  # FoDTenant: 'Your FoD tenant'
-  # ScanCentralCtrlUrl: 'Your ScanCentral Controller URL'
-  # ScanCentralClientToken: 'Your ScanCentral Client Token'
-  # ScanCentralNotificationEmail: 'Your Email Address'
-  # ScanCentralDASTApiUrl: 'Your ScanCentral DAST API URL'
-  # ScanCentralDASTCICDAuthToken: 'Your ScanCentral DAST CICD Authentication Token'
-  # ScanCentralDASTCICDIdentifier: 'Your ScanCentral DAST CICD Identifier'
-  # SSCUrl: 'Your SSC URL'
-  # SSCApplicationName: 'IWA.NET'
-  # SSCApplicationVersion: 'Your SSC application version'
-  # SSCAuthToken: 'Your SSC CI Authentication Token'
-  # ScanCentralVersion: 'The version of ScanCentral being used'
+  solution: '**/IWA.NET.sln'
+  buildPlatform: 'x64'
+  buildConfiguration: 'Release'
 
-  solution: '**/*.sln'
-  vsDevCmd: 'C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat' # location of visual studio VsDevCmd batch file on Agent
-  buildConfiguration: 'Debug'
-  publishProfile: 'iwanet - Web Deploy'
-  fortifyUploadDir: 'fod' # directory to be created containing all dependencies uploaded to FOD for static analysis
-  FoDConnection: 'FODAzureDevOps' # the name of Fortify on Demand service connection configured in Project Settings
-  SSCConnection: 'SSCAzureDevOps' # the name of the Fortify SSC "generic" connection configured in Project Settings
-  ScanCentralLogsDir: 'C:\Users\VssAdministrator\AppData\Local\Fortify\scancentral-$(ScanCentralVersion)\log' # where ScanCentral logs will be written to
-
-
-stages:
-
-#
-# Static Application Security Testing with Fortify on Demand
-#
-- stage: FoD_SAST
-  displayName: 'FoD SAST'
-  pool:
-    # use Azure DevOps provided agent
-    vmImage: 'windows-2022'
-    # or uncomment to use a local Agent pool named 'Fortify'
-    #name: Fortify
-  jobs:
-  - job: UploadAndScan
-    displayName: "Upload and Scan"
-    steps:
-     - task: FortifyOnDemandStatic@8
-      # Carry out a Fortify on Demand static assessment
-       inputs:
-        FortifyProjects: '.'
-        FodConnection: 'FOD sandbox'
-        ReleaseOptions: '0'
-        ReleaseId: $(FOD_ReleaseId)
-        EntitlementSelection: '1'
-        EntitlementPreference: '1'
-        OverrideScanSettings: '2'
-        InProgressScanActionType: '2'
-        RemediationScanPreference: '2'
-        BuildType: 'msbuild'
-        BuildFile: 'IWA.NET.sln'
-        PolicyFailAction: '0'
-        PollingInterval: 5
-        OpenSourceComponent: true
-    
-    
-
-
-
-
-
-
-
-
-
-
-     - task: JavaToolInstaller@0
-       inputs:
-        versionSpec: "17"
-        jdkArchitectureOption: x64
-        jdkSourceOption: PreInstalled
-
-       #download FortifyVulnerabilityExporter
-     - powershell: "Invoke-webrequest  https://github.com/fortify/FortifyVulnerabilityExporter/releases/download/v2.0.4/FortifyVulnerabilityExporter.zip -outfile fve.zip"
-    
-       #unpack
-     - task: ExtractFiles@1
-       inputs:
-        archiveFilePatterns: "**/fve.zip"
-        destinationFolder: $(Agent.ToolsDirectory)/fve
-      
-       #export SARIF
-     - task: CmdLine@2
-       inputs:
-         script: "java -jar $(Agent.ToolsDirectory)/fve/FortifyVulnerabilityExporter.jar $(Agent.ToolsDirectory)/fve/config/FodToGitHub.yml --fod.baseUrl=$(FOD_BaseUrl) --fod.user=$(FOD_User) --fod.password=$(FOD_Password) --fod.release.id=$(FOD_ReleaseId)"
+steps:
+- task: NuGetCommand@2
+  inputs:
+    command: 'restore'
+    restoreSolution: '**/IWA.NET.sln'
+    feedsToUse: 'select'
+- task: MSBuild@1
+- task: FortifyScanCentralSAST@7
+  inputs:
+    scanCentralCtrlUrl: 'https://scsastctrl.uat.fortifyhosted.net/scancentral-ctrl'
+    scanCentralClientToken: '$(clientToken)'
+    sscUrl: 'https://ssc.uat.fortifyhosted.net'
+    sscCiToken: '$(ciToken)'
+    uploadToSSC: true
+    applicationIdentifierType: 'byId'
+    applicationVersionId: '16821'
+    buildTool: 'msbuild'
+    buildFile: 'IWA.NET.sln'
+    buildCommand: '/t:rebuild'
