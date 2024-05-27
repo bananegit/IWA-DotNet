@@ -83,7 +83,7 @@ stages:
           $(Agent.ToolsDirectory)/fcli.exe ssc issue count --appversion=$(appId)
  
           echo Start Synchronisation of Debricked results into Fortify
-          $(Agent.ToolsDirectory)/fcli.exe ssc artifact import-debricked --appversion=$(appId) --repository=80953 --branch= -t=$(debrickedToken)
+          $(Agent.ToolsDirectory)/fcli.exe ssc artifact import-debricked --appversion=$(appId) --repository=91032 --branch=main -t=$(debrickedToken)
  
           echo Logout and cleanup
           $(Agent.ToolsDirectory)/fcli.exe ssc session logout -u $(sscUser) -p $(sscPassword)
