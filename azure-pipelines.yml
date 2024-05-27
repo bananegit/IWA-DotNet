@@ -33,11 +33,11 @@ stages:
       inputs:
         scanCentralCtrlUrl: 'https://scsastctrl.uat.fortifyhosted.net/scancentral-ctrl'
         scanCentralClientToken: '$(clientToken)'
-        sscUrl: 'https://ssc.uat.fortifyhosted.net'
+        sscUrl: '$(sscUrl)'
         sscCiToken: '$(ciToken)'
         uploadToSSC: true
         applicationIdentifierType: 'byId'
-        applicationVersionId: '16822'
+        applicationVersionId: $(appId)
         buildTool: 'msbuild'
         buildFile: 'IWA.NET.sln'
         buildCommand: '/t:rebuild'
@@ -48,14 +48,18 @@ stages:
   - job: Debricked
     displayName: Fortify SCA (Debricked)
     steps:
-      - script: mvn dependency:tree -DoutputFile=.debricked-maven-dependencies.tgf -DoutputType=tgf
-        displayName: 'mvn dependency:tree'
+      - powershell: 'Invoke-Webrequest "https://github.com/debricked/cli/releases/latest/download/cli_windows_x86_64.tar.gz" -outfile debricked.tar.gz'
+      - task: ExtractFiles@1
+        inputs:
+         archiveFilePatterns: "**/debricked.tar.gz"
+         destinationFolder: $(Agent.ToolsDirectory)
+         cleanDestinationFolder: false
       - script: |
-          env > env.list
-          docker run -v $HOME:$HOME --env-file ./env.list --entrypoint "/azure-devops.sh" debricked/debricked-scan:latest
+          $(Agent.ToolsDirectory)/debricked.exe resolve
+          $(Agent.ToolsDirectory)/debricked.exe scan
         displayName: 'Debricked scan'
         env:
-          DEBRICKED_TOKEN: $(DEBRICKED_TOKEN)
+          DEBRICKED_TOKEN: $(debrickedToken)
 
 
 - stage: SummaryAndSync
@@ -68,14 +72,14 @@ stages:
     steps:
       - script: |
           echo Setting connection with Fortify Platform
-          fcli ssc session login --url $(SSC_URL) -u $(SSC_USER) -p $(SSC_PASSWORD)
+          fcli ssc session login --url $(sscUrl) -u $(sscUser) -p $(sscPassword)
  
           echo Summary of Fortify Scan
-          fcli ssc appversion-vuln count --appversion=$SSC_APP_VERSION_ID
+          fcli ssc appversion-vuln count --appversion=$(appId)
  
           echo Start Synchronisation of Debricked results into Fortify
-          fcli ssc appversion-artifact import debricked --appversion=$(SSC_APP_NAME):$(SSC_APP_VERSION) --repository=janwienand0361/IWA --branch=main -t=$(DEBRICKED_TOKEN)
+          fcli ssc appversion-artifact import debricked --appversion=$(appId) --repository=80953 --branch=main -t=$(debrickedToken)
  
           echo Logout and cleanup
-          fcli ssc session logout -u $(SSC_USER) -p $(SSC_PASSWORD)
+          fcli ssc session logout -u $(sscUser) -p $(sscPassword)
         displayName: Scan Summay and Sync
