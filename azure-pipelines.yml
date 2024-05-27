@@ -67,20 +67,24 @@ stages:
   jobs:
   - job: SummaryAndSync
     displayName: Scan Summay and Sync
-    container:
-      image: fortifydocker/fortify-ci-tools:latest
  
     steps:
+      - powershell: 'Invoke-Webrequest "https://github.com/fortify/fcli/releases/download/v2.4.0/fcli-windows.zip" -outfile fcli.zip'
+      - task: ExtractFiles@1
+        inputs:
+         archiveFilePatterns: "**/fcli.zip"
+         destinationFolder: $(Agent.ToolsDirectory)
+         cleanDestinationFolder: false
       - script: |
           echo Setting connection with Fortify Platform
-          fcli ssc session login --url $(sscUrl) -u $(sscUser) -p $(sscPassword)
+          $(Agent.ToolsDirectory)/fcli.exe ssc session login --url $(sscUrl) -u $(sscUser) -p $(sscPassword)
  
           echo Summary of Fortify Scan
-          fcli ssc appversion-vuln count --appversion=$(appId)
+          $(Agent.ToolsDirectory)/fcli.exe ssc appversion-vuln count --appversion=$(appId)
  
           echo Start Synchronisation of Debricked results into Fortify
-          fcli ssc appversion-artifact import debricked --appversion=$(appId) --repository=80953 --branch=main -t=$(debrickedToken)
+          $(Agent.ToolsDirectory)/fcli.exe ssc appversion-artifact import debricked --appversion=$(appId) --repository=80953 --branch=main -t=$(debrickedToken)
  
           echo Logout and cleanup
-          fcli ssc session logout -u $(sscUser) -p $(sscPassword)
+          $(Agent.ToolsDirectory)/fcli.exe ssc session logout -u $(sscUser) -p $(sscPassword)
         displayName: Scan Summay and Sync
