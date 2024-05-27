@@ -80,10 +80,10 @@ stages:
           $(Agent.ToolsDirectory)/fcli.exe ssc session login --url $(sscUrl) -u $(sscUser) -p $(sscPassword)
  
           echo Summary of Fortify Scan
-          $(Agent.ToolsDirectory)/fcli.exe ssc appversion-vuln count --appversion=$(appId)
+          $(Agent.ToolsDirectory)/fcli.exe ssc issue count --appversion=$(appId)
  
           echo Start Synchronisation of Debricked results into Fortify
-          $(Agent.ToolsDirectory)/fcli.exe ssc appversion-artifact import debricked --appversion=$(appId) --repository=80953 --branch=main -t=$(debrickedToken)
+          $(Agent.ToolsDirectory)/fcli.exe ssc artifact import-debricked --appversion=$(appId) --repository=80953 --branch=main -t=$(debrickedToken)
  
           echo Logout and cleanup
           $(Agent.ToolsDirectory)/fcli.exe ssc session logout -u $(sscUser) -p $(sscPassword)
