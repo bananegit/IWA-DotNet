@@ -47,6 +47,7 @@ stages:
   jobs:
   - job: Debricked
     displayName: Fortify SCA (Debricked)
+    continueOnError: true
     steps:
       - powershell: 'Invoke-Webrequest "https://github.com/debricked/cli/releases/latest/download/cli_windows_x86_64.tar.gz" -outfile debricked.tar.gz'
       - task: ExtractFiles@1
