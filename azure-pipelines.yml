@@ -56,7 +56,6 @@ stages:
          destinationFolder: $(Agent.ToolsDirectory)
          cleanDestinationFolder: false
       - script: |
-          $(Agent.ToolsDirectory)/debricked.exe resolve
           $(Agent.ToolsDirectory)/debricked.exe scan
         displayName: 'Debricked scan'
         env:
